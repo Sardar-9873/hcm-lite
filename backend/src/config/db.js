@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
 
+const dns = require("node:dns");
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
+
 const connectDB = async () => {
   try {
-    const mongoUri = process.env.MONGO_URI || 'mongodb+srv://sahal:jio-bawa-thillu@backend-practice.x8fydlq.mongodb.net/';
+    const mongoUri = process.env.MONGO_URI;
     const conn = await mongoose.connect(mongoUri);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {

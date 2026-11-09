@@ -5,13 +5,14 @@
   "main": "src/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev" : "node --watch src/server.js"
+    "dev": "node --watch src/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google/genai": "^3.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.9",
@@ -19,7 +20,6 @@
     "joi": "^18.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.11.4",
-    "openai": "^7.43.0",
     "pdfkit": "^0.20.2"
   },
   "devDependencies": {

@@ -36,7 +36,7 @@ export default function HomePage() {
           router.replace('/employee');
         }
       } catch (err) {
-        setStatusText('Backend server is offline or unreachable. Please start backend on port 5000.');
+        setStatusText('Backend server is offline or unreachable. Please start backend on port 4000.');
       }
     }
 

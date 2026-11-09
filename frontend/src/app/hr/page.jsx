@@ -42,10 +42,29 @@ export default function HRDashboard() {
     fetchHRData();
   }, []);
 
+  const [registering, setRegistering] = useState(false);
+
   const handleRegisterEmployee = async (e) => {
     e.preventDefault();
+
+    setRegistering(true);
+
     try {
-      alert(`Employee ${empForm.firstName} ${empForm.lastName} registered! Temporary password generated.`);
+      const res = await API.post('/employees', {
+        ...empForm,
+        basicSalary: Number(empForm.basicSalary),
+      });
+
+      const { employee, credentials } = res.data;
+
+      alert(
+        `Employee registered successfully!\n\n` +
+        `Name: ${employee.firstName} ${employee.lastName}\n` +
+        `Email: ${credentials.email}\n` +
+        `Temporary Password: ${credentials.temporaryPassword}\n\n` +
+        `Please securely share these credentials with the employee.`
+      );
+
       setEmpForm({
         employeeCode: '',
         firstName: '',
@@ -54,10 +73,15 @@ export default function HRDashboard() {
         department: 'Engineering',
         designation: 'Junior',
         basicSalary: '',
-        joiningDate: new Date().toISOString().split('T')[0]
+        joiningDate: new Date().toISOString().split('T')[0],
       });
     } catch (err) {
-      alert(err.response?.data?.error || 'Registration failed');
+      alert(
+        err.response?.data?.error ||
+        'Registration failed. Please try again.'
+      );
+    } finally {
+      setRegistering(false);
     }
   };
 
@@ -149,10 +173,9 @@ export default function HRDashboard() {
                         <td className="p-3 text-gray-600">{row.date}</td>
                         <td className="p-3 text-gray-600">{new Date(row.checkIn).toLocaleTimeString()}</td>
                         <td className="p-3">
-                          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${
-                            row.status === 'present' ? 'bg-emerald-100 text-emerald-800' :
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-medium ${row.status === 'present' ? 'bg-emerald-100 text-emerald-800' :
                             row.status === 'late' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'
-                          }`}>
+                            }`}>
                             {row.status}
                           </span>
                         </td>
@@ -251,9 +274,12 @@ export default function HRDashboard() {
               <div className="sm:col-span-2 pt-2">
                 <button
                   type="submit"
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg shadow transition"
+                  disabled={registering}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs px-5 py-2.5 rounded-lg shadow transition disabled:opacity-50"
                 >
-                  Create Employee & Login
+                  {registering
+                    ? 'Registering Employee...'
+                    : 'Create Employee & Login'}
                 </button>
               </div>
             </form>

@@ -20,18 +20,26 @@ export default function AdminDashboard() {
   // Data fetching
   const fetchAdminData = async () => {
     setLoading(true);
-    try {
-      // Audit logs fetch karein
-      const auditRes = await API.get('/audit/logs');
-      setAuditLogs(auditRes.data || []);
 
-      // Mock/Initial overview metrics (Database se bind ho jayenge)
+    try {
+      const [auditRes, payrollRes, dashboardRes] = await Promise.all([
+        API.get('/audit/logs'),
+        API.get('/payroll/runs'),
+        API.get('/dashboard/admin')
+      ]);
+
+      setAuditLogs(auditRes.data || []);
+      setPayrollDrafts(payrollRes.data || []);
+
+      const dashboardStats = dashboardRes.data.stats;
+
       setStats({
-        headcount: 18,
-        payrollCost: 1450000,
-        attritionRate: '2.4%',
-        avgSalary: 80500
+        headcount: dashboardStats.headcount,
+        payrollCost: dashboardStats.payrollCost,
+        attritionRate: `${dashboardStats.attritionRate}%`,
+        avgSalary: dashboardStats.avgSalary
       });
+
     } catch (err) {
       console.error('Error fetching admin data:', err);
     } finally {
@@ -43,21 +51,46 @@ export default function AdminDashboard() {
     fetchAdminData();
   }, []);
 
+
   const handleFinalizePayroll = async (payrollId) => {
-    if (!confirm('Are you sure you want to finalize this payroll? It will be locked permanently.')) return;
+    if (
+      !confirm(
+        'Are you sure you want to finalize this payroll? It will be locked permanently.'
+      )
+    ) return;
+
     try {
-      await API.patch(`/payroll/${payrollId}/finalize`);
-      alert('Payroll finalized and locked successfully!');
-      fetchAdminData();
+      const res = await API.patch(
+        `/payroll/${payrollId}/finalize`
+      );
+
+      setPayrollDrafts((prev) =>
+        prev.map((run) =>
+          run._id === payrollId
+            ? res.data.run
+            : run
+        )
+      );
+
+      alert(res.data.message || 'Payroll finalized successfully!');
     } catch (err) {
-      alert(err.response?.data?.error || 'Failed to finalize payroll');
+      console.error("FINALIZE PAYROLL ERROR:", err);
+      console.error("SERVER RESPONSE:", err.response?.data);
+      console.error("STATUS CODE:", err.response?.status);
+
+      alert(
+        err.response?.data?.error ||
+        err.response?.data?.message ||
+        err.message ||
+        "Failed to finalize payroll"
+      );
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        
+
         {/* Navigation & Header */}
         <header className="flex flex-wrap justify-between items-center bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-lg">
           <div>
@@ -82,22 +115,22 @@ export default function AdminDashboard() {
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <p className="text-xs text-slate-400">Total Headcount</p>
             <p className="text-2xl font-bold text-white mt-1">{stats.headcount}</p>
-            <span className="text-[10px] text-emerald-400">+2 joined this month</span>
+            <span className="text-[10px] text-emerald-400">Active & probation employees</span>
           </div>
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <p className="text-xs text-slate-400">Total Payroll Cost</p>
             <p className="text-2xl font-bold text-white mt-1">PKR {stats.payrollCost.toLocaleString()}</p>
-            <span className="text-[10px] text-slate-400">Current Month Forecast</span>
+            <span className="text-[10px] text-slate-400">Latest finalized payroll</span>
           </div>
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <p className="text-xs text-slate-400">Average Salary</p>
             <p className="text-2xl font-bold text-white mt-1">PKR {stats.avgSalary.toLocaleString()}</p>
-            <span className="text-[10px] text-indigo-400">Across 4 Departments</span>
+            <span className="text-[10px] text-indigo-400">Average basic salary</span>
           </div>
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <p className="text-xs text-slate-400">Attrition Rate (YTD)</p>
             <p className="text-2xl font-bold text-emerald-400 mt-1">{stats.attritionRate}</p>
-            <span className="text-[10px] text-emerald-400">Low turnover health</span>
+            <span className="text-[10px] text-emerald-400">Exited employees / total employees</span>
           </div>
         </div>
 
@@ -175,18 +208,48 @@ export default function AdminDashboard() {
               </p>
             </div>
 
-            <div className="border border-slate-700 rounded-xl p-4 flex items-center justify-between bg-slate-900/50">
-              <div>
-                <p className="font-semibold text-sm text-white">Month: 2026-10 (Current Cycle)</p>
-                <p className="text-xs text-slate-400">Total Net Disbursed: PKR 1,280,000 • Prepared by HR</p>
-              </div>
-              <button
-                onClick={() => handleFinalizePayroll('active_month')}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition"
-              >
-                Finalize & Lock Month
-              </button>
-            </div>
+            {payrollDrafts.length > 0 ? (
+              payrollDrafts.map((run) => (
+                <div
+                  key={run._id}
+                  className="border border-slate-700 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4 bg-slate-900/50"
+                >
+                  <div>
+                    <p className="font-semibold text-sm text-white">
+                      Month: {run.month}
+                    </p>
+
+                    <p className="text-xs text-slate-400 mt-1">
+                      Total Gross: PKR {run.totalGross?.toLocaleString()}
+                    </p>
+
+                    <p className="text-xs text-slate-400">
+                      Total Net: PKR {run.totalNet?.toLocaleString()}
+                    </p>
+
+                    <span className={`inline-block mt-2 text-[10px] px-2 py-1 rounded ${run.status === 'finalized'
+                      ? 'bg-emerald-900/50 text-emerald-400'
+                      : 'bg-amber-900/50 text-amber-400'
+                      }`}>
+                      {run.status.toUpperCase()}
+                    </span>
+                  </div>
+
+                  {run.status === 'draft' && (
+                    <button
+                      onClick={() => handleFinalizePayroll(run._id)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition"
+                    >
+                      Finalize & Lock
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-400 text-center py-8">
+                No payroll runs available. Ask HR to create a payroll draft.
+              </p>
+            )}
           </div>
         )}
 
