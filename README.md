@@ -7,7 +7,7 @@ HCM Lite helps organizations manage employees, track attendance, process leave r
 ## 🚀 Live Demo
 
 - **Frontend:** https://hcm-lite-pi.vercel.app/
-- **Backend API:** https://duffel-closed-rabbit.abasthan.app/
+- **Backend API:** https://hcm-lite-3nbd.vercel.app/api
 - **GitHub Repository:** https://github.com/Sardar-9873/hcm-lite
 
 ## ✨ Key Features
